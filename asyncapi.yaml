@@ -1,0 +1,174 @@
+asyncapi: '3.0.0'
+info:
+  title: 'MQTT Message Handler'
+  description: 'An API that handles incoming MQTT messages on a specific topic.'
+  version: '1.0.0'
+  contact:
+    name: 'API Support'
+    email: 'support@domain.com'
+    url: 'https://www.domain.com/'
+  license:
+    name: 'MIT'
+
+servers:
+  mosquitto:
+    host: localhost:1883
+    protocol: mqtt
+  express:
+    host: localhost:3001
+    protocol: http
+
+channels:
+  temperatureMeasured:
+    address: 'room/{roomId}/temperature/{sensorId}/measured'
+    description: Channel for temperature data.
+    servers:
+      - $ref: '#/servers/mosquitto'
+    parameters:
+      roomId:
+        $ref: '#/components/parameters/roomId'
+      sensorId:
+        $ref: '#/components/parameters/sensorId'
+    messages:
+      temperatureMeasuredMessage:
+        $ref: '#/components/messages/temperatureMeasuredMessage'
+  heatingTurnOnOff:
+    address: 'room/{roomId}/heating/turnOnOff'
+    description: Channel for turning heating on or off for a particular room
+    servers:
+      - $ref: '#/servers/mosquitto'
+    parameters:
+      roomId:
+        $ref: '#/components/parameters/roomId'
+    messages:
+      heatingTurnOnOffMessage:
+        $ref: '#/components/messages/heatingTurnOnOffMessage'
+  temperatureHistory:
+    address: 'room/{roomId}/temperature/{sensorId}/history'
+    description: Channel for temperature data.
+    servers:
+      - $ref: '#/servers/express'
+    parameters:
+      roomId:
+        $ref: '#/components/parameters/roomId'
+      sensorId:
+        $ref: '#/components/parameters/sensorId'
+    messages:
+      temperatureHistoryMessage:
+        $ref: '#/components/messages/temperatureHistoryMessage'
+
+operations:
+  onTemperatureMeasured:
+    action: 'receive'
+    summary: Information about temperature conditions for a particular temperature sensor.
+    channel:
+      $ref: '#/channels/temperatureMeasured'
+    messages:
+      - $ref: '#/channels/temperatureMeasured/messages/temperatureMeasuredMessage'
+  heatingTurnOnOff:
+    action: 'send'
+    summary: Turns heating on or off
+    channel:
+      $ref: '#/channels/heatingTurnOnOff'
+    messages:
+      - $ref: '#/channels/heatingTurnOnOff/messages/heatingTurnOnOffMessage'
+  temperatureHistory:
+    action: 'send'
+    summary: Get stored information for a particular sensor.
+    bindings:
+      http:
+        method: GET
+    channel:
+      $ref: '#/channels/temperatureHistory'
+    messages:
+      - $ref: '#/channels/temperatureHistory/messages/temperatureHistoryMessage'
+
+components:
+  parameters:
+    sensorId:
+      description: The Id of the temperature sensor.
+    roomId:
+      description: The id of the room.
+  messages:
+    temperatureMeasuredMessage:
+      x-unique-id: temperatureMeasuredMessage
+      name: temperatureMeasuredMessage
+      contentType: 'application/json'
+      payload:
+        $ref: '#/components/schemas/temperatureMeasuredPayload'
+    heatingTurnOnOffMessage:
+      x-unique-id: heatingTurnOnOffMessage
+      name: turnHeatingOnOffMessage
+      contentType: 'application/json'
+      payload:
+        $ref: '#/components/schemas/turnOnOffPayload'
+    temperatureHistoryMessage:
+      name: temperatureHistoryMessage
+      contentType: 'application/json, text/csv'
+      traits:
+        - $ref: '#/components/messageTraits/csvHeader'
+      payload:
+        type: array
+        items:
+          $ref: '#/components/schemas/temperatureHistoryPayload'
+  messageTraits:
+    csvHeader:
+      headers:
+        type: object
+        properties:
+          accept:
+            enum:
+              - 'text/csv'
+
+  schemas:
+    temperatureMeasuredPayload:
+      type: object
+      required:
+        - "id"
+        - "temperature"
+        - "sentAt"
+      properties:
+        id:
+          $ref: '#/components/schemas/sensorId'
+        temperature:
+          $ref: '#/components/schemas/temperature'
+        sentAt:
+          $ref: '#/components/schemas/sentAt'
+    turnOnOffPayload:
+      type: object
+      required:
+        - "command"
+        - "sentAt"
+      properties:
+        command:
+          type: string
+          enum:
+            - 'on'
+            - 'off'
+          description: Turn device on or off
+        sentAt:
+          $ref: '#/components/schemas/sentAt'
+    temperatureHistoryPayload:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/sensorId'
+        temperature:
+          $ref: '#/components/schemas/temperature'
+        sentAt:
+          $ref: '#/components/schemas/sentAt'
+    roomId:
+      type: integer
+      minimum: 0
+      description: Id of the room.
+    sensorId:
+      type: integer
+      minimum: 0
+      description: Id of the sensor.
+    sentAt:
+      type: string
+      format: date-time
+      description: Date and time when the message was sent.
+    temperature:
+      type: integer
+      description: Temperature measured in celsius.

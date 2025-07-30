@@ -1,0 +1,17 @@
+{
+  "name": "asyncapi",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "generate-docs": "asyncapi generate fromTemplate asyncapi.yaml @asyncapi/html-template@3.0.0 --use-new-generator -o ./docs --force-write"
+  },
+  "dependencies": {
+    "@asyncapi/generator": "^2.6.0",
+    "@asyncapi/parser": "^3.4.0",
+    "asyncapi-validator": "^5.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "json-2-csv": "^5.5.9",
+    "mqtt": "^5.10.3"
+  }
+}
